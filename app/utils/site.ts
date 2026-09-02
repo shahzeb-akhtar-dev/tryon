@@ -1,0 +1,6 @@
+export const SITE_NAME = 'TryOn'
+export const SITE_URL = ''
+export const SITE_LOGIN_PATH = '/login'
+export const SITE_TRYON_PATH = '/tryon'
+export const SITE_GALLERY_PATH = '/gallery'
+export const SITE_ABOUT_PATH = '/about'
