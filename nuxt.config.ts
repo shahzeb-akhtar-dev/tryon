@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
-  modules: ["@primevue/nuxt-module", "@nuxtjs/tailwindcss", "@nuxt/image"],
+  modules: ["@primevue/nuxt-module", "@nuxtjs/tailwindcss", "@nuxt/image", "@pinia/nuxt"],
   tailwindcss: {
     configPath: "tailwind.config.ts",
   },
