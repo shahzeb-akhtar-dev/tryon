@@ -1,7 +1,15 @@
-export default defineNuxtRouteMiddleware((to, from) => {
+export default defineNuxtRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore();
 
-  if (!authStore.isAuthenticated) {
+  if (import.meta.client && !authStore.isInitialized) {
+    let attempts = 0;
+    while (!authStore.isInitialized && attempts < 30) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+  }
+
+  if (authStore.isInitialized && !authStore.isAuthenticated) {
     return navigateTo("/login");
   }
 });

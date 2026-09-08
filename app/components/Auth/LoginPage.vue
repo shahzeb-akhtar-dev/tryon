@@ -3,6 +3,7 @@ import { reactive, ref, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 
 const { loading, error, login, signup, loginWithGoogle, resetPassword } = useAuth()
+const router = useRouter()
 
 const activeTab = ref<'login' | 'signup'>('login')
 const showPassword = ref(false)
@@ -25,6 +26,7 @@ const handleSubmit = async () => {
     } else {
       await signup(form.email, form.password)
     }
+    router.push('/')
   } catch (e: any) {
     formError.value = e?.message || 'Something went wrong. Please try again.'
   }
@@ -34,6 +36,7 @@ const handleGoogleLogin = async () => {
   formError.value = ''
   try {
     await loginWithGoogle()
+    router.push('/')
   } catch (e: any) {
     formError.value = e?.message || 'Google login failed.'
   }
