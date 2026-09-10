@@ -10,8 +10,7 @@ export default <Config>{
   theme: {
     extend: {
       colors: {
-        primary: '#1A1A1A',
-        secondary: '#C5A059',
+        primary: '#C5A059',
         tertiary: '#F4F4F2',
         neutral: '#666666',
       },

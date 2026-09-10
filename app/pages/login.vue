@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'auth',
+  layout: false,
   middleware: 'guest',
 })
 
@@ -9,13 +9,14 @@ useSeoMeta({
   description: 'Sign in to TryOn to curate your virtual wardrobe with AI-powered try-on technology.',
   ogTitle: 'Log In | TryOn',
   ogDescription: 'Sign in to TryOn to curate your virtual wardrobe.',
+  ogImage: '/images/login-hero.png',
   twitterCard: 'summary_large_image',
 })
 </script>
 
 <template>
-  <div class="w-full max-w-[420px]">
+  <div class="relative w-full overflow-hidden">
     <AuthHeroImage />
-    <AuthLoginPage class="mt-6" />
+    <AuthLoginPage />
   </div>
 </template>

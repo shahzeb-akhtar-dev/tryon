@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import YourPhotoSection from '~/components/Homepage/YourPhotoSection.vue'
-import GarmentImageSection from '~/components/Homepage/GarmentImageSection.vue'
-import DesignDetailsSection from '~/components/Homepage/DesignDetailsSection.vue'
+import UserPhotoSection from '~/components/Homepage/UserPhotoSection.vue'
+import GarmentPhotoSection from '~/components/Homepage/GarmentPhotoSection.vue'
 
 definePageMeta({
   middleware: 'auth',
@@ -27,18 +26,17 @@ const handleGenerate = () => {
 </script>
 
 <template>
-  <main class="min-h-screen bg-tertiary">
+  <main class="min-h-screen">
     <div class="max-w-[520px] mx-auto px-5 py-8">
       <div class="text-center mb-8">
-        <h1 class="text-3xl text-primary font-primary font-bold mb-2">Create New Try-on</h1>
+        <h1 class="text-3xl text-black font-primary font-bold mb-2">Create New Try-on</h1>
         <p class="text-md text-neutral font-primary">
           Upload reference images to generate a hyper-realistic AI try-on.
         </p>
       </div>
 
-      <YourPhotoSection />
-      <GarmentImageSection />
-      <DesignDetailsSection />
+      <UserPhotoSection />
+      <GarmentPhotoSection />
 
       <Button
         label="Generate Try-on"

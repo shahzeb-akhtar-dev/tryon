@@ -16,9 +16,6 @@ const onChoose = () => {
   fu.value?.choose();
 };
 
-const onUpload = () => {
-  fu.value?.upload();
-};
 
 const onClear = () => {
   fu.value?.clear();
@@ -26,8 +23,9 @@ const onClear = () => {
 };
 
 const onFileUpload = (event: { files: File[] }) => {
-  if (event.files.length > 0) {
-    uploadedPhoto.value = URL.createObjectURL(event?.files[0]);
+  const file = event.files[0];
+  if (file) {
+    uploadedPhoto.value = URL.createObjectURL(file);
   }
 };
 
@@ -51,73 +49,43 @@ const formatSize = (bytes: number | undefined) => {
 </script>
 
 <template>
-  <section class="mb-8">
+  <section class="mb-8 ">
     <div class="flex items-center gap-3 mb-4">
       <span
         class="w-7 h-7 bg-primary text-tertiary font-primary text-md font-bold rounded-full flex items-center justify-center flex-shrink-0"
       >
         1
       </span>
-      <h2 class="text-xl text-primary font-primary font-bold">Your Photo</h2>
+      <h2 class="text-xl text-black font-primary font-bold">Your Photo</h2>
       <span
-        class="ml-auto text-xs text-secondary font-primary font-semibold bg-secondary/10 px-2 py-0.5 rounded-xs"
+        class="ml-auto text-xs text-primary font-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-xs"
       >
         REQUIRED
       </span>
     </div>
 
-    <p class="text-sm text-neutral font-primary mt-3 leading-relaxed">
-      Upload a clear, full-body photo with even lighting and form-fitting
-      clothes.
-    </p>
-
-    <div class="mt-5">
-      <p
-        class="text-xs text-neutral font-primary font-semibold tracking-wider mb-2"
-      >
-        RECENT PHOTOS
-      </p>
-      <div class="flex gap-3">
-        <button
-          v-for="photo in recentPhotos"
-          :key="photo.id"
-          class="w-14 h-14 rounded-lg overflow-hidden border-2 border-transparent transition duration-normal hover:border-secondary flex-shrink-0"
-          :class="{ 'border-secondary': uploadedPhoto === photo.src }"
-          @click="selectRecent(photo.src)"
-        >
-          <NuxtImg
-            :src="photo.src"
-            :alt="photo.alt"
-            class="w-full h-full object-cover"
-          />
-        </button>
-      </div>
-    </div>
-
-    <div class="mt-6 max-w-md">
+    <div class="mt-6 ">
       <FileUpload
         ref="fu"
         name="user"
-        url="/api/upload"
         :multiple="false"
         accept="image/*"
         :maxFileSize="1000000"
         mode="advanced"
         :pt="{
-          root: { class: 'border border-dashed' },
+          root: { class: 'border border-dashed bg-gray-200' },
+          input: { class: 'hidden' },
           header: { class: 'hidden' },
           content: { class: 'p-8' },
         }"
         @select="onFileUpload"
       >
-        <template #header>
-          <div class="hidden"></div>
-        </template>
+        <!-- <template v-if="false" #header></template> -->
         <template #content="{ files, removeFileCallback, messages }">
           <div v-if="messages?.length" class="flex flex-col gap-2">
-            <Message v-for="msg of messages" :key="msg" severity="error">{{
-              msg
-            }}</Message>
+            <Message v-for="msg of messages" :key="msg" severity="error">
+              {{ msg }}
+            </Message>
           </div>
           <div v-if="files.length" class="flex flex-col gap-4">
             <div class="flex flex-col gap-2">
@@ -131,7 +99,7 @@ const formatSize = (bytes: number | undefined) => {
                     alt="Preview"
                     class="size-[12rem] object-cover rounded-lg"
                   />
-                  <span class="font-medium text-primary font-primary">
+                  <span class="font-medium text-black font-primary">
                     {{ files[0]?.name }}
                   </span>
                   <span class="text-sm text-neutral font-primary">
@@ -165,17 +133,43 @@ const formatSize = (bytes: number | undefined) => {
             />
             <div class="text-center">
               <p
-                class="text-lg font-medium text-primary font-primary mt-0 mb-1"
+                class="text-lg font-medium text-black font-primary mt-0 mb-1"
               >
                 Drop files here
               </p>
               <p class="text-sm text-neutral font-primary m-0">
                 or click to browse
               </p>
+              <p class="text-sm text-neutral font-primary mt-3 leading-relaxed">
+                Upload a clear, full-body photo with even lighting and
+                form-fitting clothes.
+              </p>
             </div>
           </div>
         </template>
       </FileUpload>
+      <div class="mt-5">
+        <p
+          class="text-xs text-neutral font-primary font-semibold tracking-wider mb-2"
+        >
+          RECENT PHOTOS
+        </p>
+        <div class="flex gap-3">
+          <button
+            v-for="photo in recentPhotos"
+            :key="photo.id"
+            class="w-14 h-14 rounded-lg overflow-hidden border-2 border-transparent transition duration-normal hover:border-primary flex-shrink-0"
+            :class="{ 'border-primary': uploadedPhoto === photo.src }"
+            @click="selectRecent(photo.src)"
+          >
+            <NuxtImg
+              :src="photo.src"
+              :alt="photo.alt"
+              class="w-full h-full object-cover"
+            />
+          </button>
+        </div>
+      </div>
     </div>
 
     <ImagePreviewDialog

@@ -61,15 +61,15 @@ components/
 - **ALWAYS** use Tailwind utility classes for styling
 - **NEVER** write custom CSS in `<style>` blocks unless absolutely necessary (e.g., complex animations)
 - Use Tailwind design tokens for colors and fonts:
-  - `text-primary` / `text-secondary` / `text-tertiary` / `text-neutral`
-  - `bg-primary` / `bg-secondary` / `bg-tertiary` / `bg-neutral`
+  - `text-black` / `text-primary` / `text-tertiary` / `text-neutral`
+  - `bg-primary` / `bg-primary` / `bg-tertiary` / `bg-neutral`
   - `font-primary` for all text
 
 ```vue
 <!-- CORRECT -->
-<h1 class="text-4xl text-primary font-primary">Virtual Try-On</h1>
+<h1 class="text-4xl text-black font-primary">Virtual Try-On</h1>
 <section class="py-4 bg-tertiary"/>
-<Button class="bg-secondary text-primary rounded-md duration-normal" />
+<Button class="bg-primary text-black rounded-md duration-normal" />
 
 <!-- WRONG -->
 <h1 class="text-4xl text-[var(--color-primary)]">Title</h1>
@@ -458,8 +458,8 @@ export function useGetTryOnResults() {
 ### Colors
 | Tailwind Class | Value | Usage |
 |---------------|-------|-------|
-| `text-primary` / `bg-primary` | `#1A1A1A` | Dark backgrounds, main text, headers |
-| `text-secondary` / `bg-secondary` | `#C5A059` | Gold accent, CTAs, highlights |
+| `text-black` / `bg-primary` | `#1A1A1A` | Dark backgrounds, main text, headers |
+| `text-primary` / `bg-primary` | `#C5A059` | Gold accent, CTAs, highlights |
 | `text-tertiary` / `bg-tertiary` | `#F4F4F2` | Light backgrounds, cards, containers |
 | `text-neutral` / `bg-neutral` | `#666666` | Body text, secondary labels, muted content |
 

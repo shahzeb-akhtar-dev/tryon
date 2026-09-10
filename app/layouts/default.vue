@@ -13,7 +13,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-tertiary">
+  <div class="min-h-screen max-w-lg items-center mx-auto flex flex-col *:text-black">
     <header class="bg-white border-b border-neutral/10">
       <nav class="max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-10 2xl:px-12 flex items-center justify-between h-16">
         <div class="flex items-center gap-3">
@@ -23,12 +23,12 @@ const handleLogout = async () => {
             alt="User avatar"
             class="w-9 h-9 rounded-full object-cover"
           />
-          <div v-else class="w-9 h-9 rounded-full bg-secondary/20 flex items-center justify-center">
-            <Icon icon="ic:baseline-person" class="w-5 h-5 text-secondary" />
+          <div v-else class="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center">
+            <Icon icon="ic:baseline-person" class="w-5 h-5 text-primary" />
           </div>
         </div>
 
-        <NuxtLink to="/" class="text-3xl text-primary font-primary font-bold tracking-tight">
+        <NuxtLink to="/" class="text-3xl text-black font-primary font-bold tracking-tight">
           {{ SITE_NAME }}
         </NuxtLink>
 
@@ -38,7 +38,7 @@ const handleLogout = async () => {
             aria-label="Logout"
             @click="handleLogout"
           >
-            <Icon icon="ic:baseline-logout" class="w-5 h-5 text-primary" />
+            <Icon icon="ic:baseline-logout" class="w-5 h-5 text-black" />
           </button>
         </div>
       </nav>
@@ -55,10 +55,10 @@ const handleLogout = async () => {
             &copy; {{ new Date().getFullYear() }} {{ SITE_NAME }}. All rights reserved.
           </span>
           <div class="flex items-center gap-6">
-            <NuxtLink to="/privacy" class="text-md text-neutral font-primary transition duration-normal hover:text-secondary">
+            <NuxtLink to="/privacy" class="text-md text-neutral font-primary transition duration-normal hover:text-primary">
               Privacy
             </NuxtLink>
-            <NuxtLink to="/terms" class="text-md text-neutral font-primary transition duration-normal hover:text-secondary">
+            <NuxtLink to="/terms" class="text-md text-neutral font-primary transition duration-normal hover:text-primary">
               Terms
             </NuxtLink>
           </div>
