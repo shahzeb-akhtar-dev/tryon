@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import type { User } from "firebase/auth";
 
 interface AuthUser {
   uid: string;
@@ -11,6 +10,7 @@ interface AuthUser {
 interface AuthState {
   user: AuthUser | null;
   token: string | null;
+  refreshToken: string | null;
   isInitialized: boolean;
 }
 
@@ -18,6 +18,7 @@ export const useAuthStore = defineStore("auth", {
   state: (): AuthState => ({
     user: null,
     token: null,
+    refreshToken: null,
     isInitialized: false,
   }),
 
@@ -28,37 +29,29 @@ export const useAuthStore = defineStore("auth", {
   },
 
   actions: {
-    setUser(firebaseUser: User | null) {
-      if (firebaseUser) {
-        this.user = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          photoURL: firebaseUser.photoURL,
-        };
-      } else {
-        this.user = null;
-      }
+    setUser(userData: AuthUser | null) {
+      this.user = userData;
     },
 
-    async setToken(firebaseUser: User) {
-      try {
-        const token = await firebaseUser.getIdToken();
-        this.token = token;
-        if (import.meta.client) {
-          sessionStorage.setItem("auth_token", token);
+    setSession(userData: AuthUser, idToken: string, refreshToken?: string) {
+      this.user = userData;
+      this.token = idToken;
+      this.refreshToken = refreshToken || null;
+      if (import.meta.client) {
+        sessionStorage.setItem("auth_token", idToken);
+        if (refreshToken) {
+          sessionStorage.setItem("auth_refresh_token", refreshToken);
         }
-      } catch (error) {
-        console.error("Failed to get token:", error);
-        this.token = null;
       }
     },
 
-    loadTokenFromStorage() {
+    loadFromStorage() {
       if (import.meta.client) {
         const token = sessionStorage.getItem("auth_token");
+        const refreshToken = sessionStorage.getItem("auth_refresh_token");
         if (token) {
           this.token = token;
+          this.refreshToken = refreshToken;
         }
       }
     },
@@ -66,8 +59,10 @@ export const useAuthStore = defineStore("auth", {
     clearAuth() {
       this.user = null;
       this.token = null;
+      this.refreshToken = null;
       if (import.meta.client) {
         sessionStorage.removeItem("auth_token");
+        sessionStorage.removeItem("auth_refresh_token");
       }
     },
 

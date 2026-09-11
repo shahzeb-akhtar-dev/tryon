@@ -4,8 +4,15 @@ import { ref } from "vue";
 import ImagePreviewDialog from "~/components/ImagePreviewDialog.vue";
 import CustomTab from "~/components/Common/CustomTab.vue";
 
+const {
+  garmentPreviewUrl,
+  savedGarments,
+  setGarmentFile,
+  loadSavedGarments,
+  selectSavedGarment,
+} = useTryOn();
+
 const activeTab = ref("new");
-const selectedGarment = ref<string | null>(null);
 const previewVisible = ref(false);
 const fu = ref();
 
@@ -17,7 +24,7 @@ const tabs = [
 const onFileUpload = (event: any) => {
   const files = event.files;
   if (files && files.length > 0) {
-    selectedGarment.value = URL.createObjectURL(files[0]);
+    setGarmentFile(files[0]);
   }
 };
 
@@ -34,14 +41,22 @@ const formatSize = (bytes: number | undefined) => {
 };
 
 const openPreview = () => {
-  if (selectedGarment.value) {
+  if (garmentPreviewUrl.value) {
     previewVisible.value = true;
   }
 };
+
+const handleSelectSaved = (garment: any) => {
+  selectSavedGarment(garment);
+};
+
+onMounted(() => {
+  loadSavedGarments();
+});
 </script>
 
 <template>
-  <section class="mb-8">
+  <section class="mb-8 bg-white p-6 rounded-lg shadow-md">
     <div class="flex items-center gap-3 mb-4">
       <span
         class="w-7 h-7 bg-primary text-tertiary font-primary text-md font-bold rounded-full flex items-center justify-center flex-shrink-0"
@@ -55,7 +70,7 @@ const openPreview = () => {
         REQUIRED
       </span>
     </div>
-    <div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="">
       <CustomTab v-model="activeTab" :tabs="tabs" class="mb-4" />
       <div>
         <div v-show="activeTab === 'new'">
@@ -84,11 +99,11 @@ const openPreview = () => {
                   <div class="flex flex-col gap-2">
                     <div
                       class="flex items-center justify-between p-3 rounded-lg bg-tertiary"
-                      v-if="selectedGarment"
+                      v-if="garmentPreviewUrl"
                     >
                       <div class="relative flex flex-col items-center gap-1">
                         <img
-                          :src="selectedGarment"
+                          :src="garmentPreviewUrl"
                           alt="Preview"
                           class="size-[12rem] object-cover rounded-lg cursor-pointer"
                           @click="openPreview"
@@ -109,7 +124,7 @@ const openPreview = () => {
                           rounded
                           @click="
                             removeFileCallback(0);
-                            selectedGarment = null;
+                            setGarmentFile(null);
                           "
                         >
                           <Icon icon="f7:trash" class="size-[1.25rem]" />
@@ -148,7 +163,22 @@ const openPreview = () => {
             </FileUpload>
         </div>
         <div v-show="activeTab === 'saved'">
-          <p class="text-neutral font-primary text-center py-8">
+          <div v-if="savedGarments.length" class="grid grid-cols-3 gap-3 py-4">
+            <div
+              v-for="garment in savedGarments"
+              :key="garment.id"
+              class="relative cursor-pointer group"
+              @click="handleSelectSaved(garment)"
+            >
+              <NuxtImg
+                :src="garment.imageUrl"
+                :alt="garment.name"
+                class="w-full h-32 object-cover rounded-lg border-2 border-transparent group-hover:border-primary transition duration-normal"
+              />
+              <p class="text-xs text-neutral font-primary mt-1 truncate">{{ garment.name }}</p>
+            </div>
+          </div>
+          <p v-else class="text-neutral font-primary text-center py-8">
             Saved garments will appear here.
           </p>
         </div>
@@ -156,7 +186,7 @@ const openPreview = () => {
     </div>
     <ImagePreviewDialog
       v-model:visible="previewVisible"
-      :src="selectedGarment || ''"
+      :src="garmentPreviewUrl || ''"
       alt="Selected garment"
       caption="Garment image"
     />

@@ -19,11 +19,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="flex w-full bg-gray-100 rounded-lg p-1">
+  <div class="flex w-full bg-tertiary rounded-lg p-1 mb-3 md:mb-6">
     <button
       v-for="tab in tabs"
       :key="tab.key"
-      class="flex-1 py-2.5 text-md font-primary rounded-md transition duration-normal flex items-center justify-center gap-1"
+      class="flex-1 py-2.5 text-sm md:text-md font-primary rounded-md transition duration-normal flex items-center justify-center gap-1"
       :class="
         props.modelValue === tab.key
           ? 'bg-white text-primary shadow-sm border-b-2 border-primary'

@@ -1,15 +1,22 @@
 export default defineNuxtRouteMiddleware(async (to, from) => {
-  const authStore = useAuthStore();
+  if (import.meta.server) {
+    return
+  }
 
-  if (import.meta.client && !authStore.isInitialized) {
-    let attempts = 0;
-    while (!authStore.isInitialized && attempts < 30) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
+  const token = sessionStorage.getItem("auth_token")
+  
+  if (token) {
+    try {
+      const response = await $fetch<{ success: boolean; user: any }>('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      
+      if (response.success && response.user) {
+        return navigateTo("/")
+      }
+    } catch (error) {
+      sessionStorage.removeItem("auth_token")
+      sessionStorage.removeItem("auth_refresh_token")
     }
   }
-
-  if (authStore.isInitialized && authStore.isAuthenticated) {
-    return navigateTo("/");
-  }
-});
+})

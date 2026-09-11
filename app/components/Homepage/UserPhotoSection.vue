@@ -1,42 +1,45 @@
 <script setup lang="ts">
 import { Icon } from "@iconify/vue";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import ImagePreviewDialog from "~/components/ImagePreviewDialog.vue";
 
-const fu = ref();
-const uploadedPhoto = ref<string | null>(null);
-const previewVisible = ref(false);
+const {
+  personPreviewUrl,
+  recentPhotos,
+  setPersonFile,
+  loadRecentPhotos,
+  selectRecentPhoto,
+  saveRecentPhoto,
+} = useTryOn();
 
-const recentPhotos = [
-  { id: 1, src: "/images/login-hero.jpg", alt: "Recent photo 1" },
-  { id: 2, src: "/images/login-hero.jpg", alt: "Recent photo 2" },
-];
+const fu = ref();
+const previewVisible = ref(false);
 
 const onChoose = () => {
   fu.value?.choose();
 };
 
-
 const onClear = () => {
   fu.value?.clear();
-  uploadedPhoto.value = null;
+  setPersonFile(null);
 };
 
 const onFileUpload = (event: { files: File[] }) => {
   const file = event.files[0];
   if (file) {
-    uploadedPhoto.value = URL.createObjectURL(file);
+    setPersonFile(file);
   }
-};
-
-const selectRecent = (src: string) => {
-  uploadedPhoto.value = src;
 };
 
 const openPreview = () => {
-  if (uploadedPhoto.value) {
+  if (personPreviewUrl.value) {
     previewVisible.value = true;
   }
+};
+
+const handleSelectRecent = (photo: any) => {
+  selectRecentPhoto(photo);
+  fu.value?.clear();
 };
 
 const formatSize = (bytes: number | undefined) => {
@@ -46,11 +49,15 @@ const formatSize = (bytes: number | undefined) => {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 };
+
+onMounted(() => {
+  loadRecentPhotos();
+});
 </script>
 
 <template>
-  <section class="mb-8 ">
-    <div class="flex items-center gap-3 mb-4">
+  <section class="mb-8 bg-white p-5 rounded-lg shadow-md">
+    <div class="flex items-center gap-3 mb-2">
       <span
         class="w-7 h-7 bg-primary text-tertiary font-primary text-md font-bold rounded-full flex items-center justify-center flex-shrink-0"
       >
@@ -63,118 +70,129 @@ const formatSize = (bytes: number | undefined) => {
         REQUIRED
       </span>
     </div>
+    <p class="text-sm text-neutral font-primary mb-5">
+      Upload a clear, full-body photo with even lighting and form-fitting
+      clothes.
+    </p>
 
-    <div class="mt-6 ">
-      <FileUpload
-        ref="fu"
-        name="user"
-        :multiple="false"
-        accept="image/*"
-        :maxFileSize="1000000"
-        mode="advanced"
-        :pt="{
-          root: { class: 'border border-dashed bg-gray-200' },
-          input: { class: 'hidden' },
-          header: { class: 'hidden' },
-          content: { class: 'p-8' },
-        }"
-        @select="onFileUpload"
-      >
-        <!-- <template v-if="false" #header></template> -->
-        <template #content="{ files, removeFileCallback, messages }">
-          <div v-if="messages?.length" class="flex flex-col gap-2">
-            <Message v-for="msg of messages" :key="msg" severity="error">
-              {{ msg }}
-            </Message>
-          </div>
-          <div v-if="files.length" class="flex flex-col gap-4">
-            <div class="flex flex-col gap-2">
-              <div
-                class="flex items-center justify-between p-3 rounded-lg bg-tertiary"
-                v-if="uploadedPhoto"
-              >
-                <div class="relative flex flex-col items-center gap-1">
-                  <img
-                    :src="uploadedPhoto"
-                    alt="Preview"
-                    class="size-[12rem] object-cover rounded-lg"
-                  />
-                  <span class="font-medium text-black font-primary">
-                    {{ files[0]?.name }}
-                  </span>
-                  <span class="text-sm text-neutral font-primary">
-                    size: {{ formatSize(files[0]?.size) }}
-                  </span>
-                  <Button
-                    class="absolute top-2 right-2 bg-white rounded-full p-2 text-red-600 hover:bg-red-100 transition duration-normal"
-                    type="button"
-                    iconOnly
-                    variant="text"
-                    severity="secondary"
-                    size="small"
-                    rounded
-                    @click="removeFileCallback(0)"
-                  >
-                    <Icon icon="f7:trash" class="size-[1.25rem]" />
-                  </Button>
-                </div>
+    <div class="flex">
+      <!-- Upload Area -->
+      <div class="flex-1 flex gap-2 ">
+        <FileUpload
+          ref="fu"
+          name="user"
+          :multiple="false"
+          accept="image/*"
+          :maxFileSize="1000000"
+          mode="advanced"
+          class=""
+          :pt="{
+            root: { class: 'border border-dashed rounded-none border-primary w-[25rem]' },
+            input: { class: 'hidden' },
+            header: { class: 'hidden' },
+            content: { class: 'p-2' },
+          }"
+          @select="onFileUpload"
+        >
+          <template #content="{ files, removeFileCallback, messages }">
+            <div v-if="messages?.length" class="flex flex-col gap-2">
+              <Message v-for="msg of messages" :key="msg" severity="error">
+                {{ msg }}
+              </Message>
+            </div>
+            <div
+              v-if="files.length && personPreviewUrl"
+              class="flex flex-col items-center gap-3 rounded-lg overflow-hidden"
+            >
+              <div class="relative">
+                <NuxtImg
+                  :src="personPreviewUrl"
+                  alt="Uploaded photo preview"
+                  class="w-48 h-64 object-cover  cursor-pointer"
+                  @click="openPreview"
+                />
+                <Button
+                  class="absolute top-2 right-2 bg-white/90 rounded-full p-1.5 text-red-500 hover:bg-red-50 transition duration-normal"
+                  type="button"
+                  iconOnly
+                  variant="text"
+                  severity="secondary"
+                  size="small"
+                  rounded
+                  @click="removeFileCallback(0)"
+                >
+                  <Icon icon="ic:baseline-close" class="w-4 h-4" />
+                </Button>
+              </div>
+              <div class="text-center">
+                <p class="text-sm font-medium text-black font-primary">
+                  {{ files[0]?.name }}
+                </p>
+                <p class="text-xs text-neutral font-primary">
+                  {{ formatSize(files[0]?.size) }}
+                </p>
               </div>
             </div>
-          </div>
-        </template>
-        <template #empty>
-          <div
-            class="flex flex-col items-center justify-center gap-3 py-8 cursor-pointer"
-            @click="onChoose"
-          >
-            <Icon
-              icon="ic:baseline-cloud-upload"
-              class="w-12 h-12 text-neutral"
-            />
-            <div class="text-center">
-              <p
-                class="text-lg font-medium text-black font-primary mt-0 mb-1"
+          </template>
+          <template #empty>
+            <div
+              class="flex flex-col items-center justify-center gap-3 py-8 cursor-pointer"
+              @click="onChoose"
+            >
+              <div class="relative">
+                <div
+                  class="w-16 h-16 bg-neutral/10 rounded-full flex items-center justify-center"
+                >
+                  <Icon
+                    icon="ic:baseline-person"
+                    class="w-8 h-8 text-neutral"
+                  />
+                </div>
+                <div
+                  class="absolute -bottom-1 -right-1 w-7 h-7 bg-primary rounded-full flex items-center justify-center border-2 border-white"
+                >
+                  <Icon icon="ic:baseline-add" class="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div class="text-center">
+                <p class="text-md font-medium text-black font-primary mb-0.5">
+                  Drop files here
+                </p>
+                <p class="text-sm text-neutral font-primary">
+                  or click to browse
+                </p>
+              </div>
+              <Button
+                type="button"
+                label="Upload Photo"
+                class=""
+                @click.stop="onChoose"
               >
-                Drop files here
-              </p>
-              <p class="text-sm text-neutral font-primary m-0">
-                or click to browse
-              </p>
-              <p class="text-sm text-neutral font-primary mt-3 leading-relaxed">
-                Upload a clear, full-body photo with even lighting and
-                form-fitting clothes.
-              </p>
+                <template #icon>
+                  <Icon icon="ic:baseline-cloud-upload" class="w-4 h-4 mr-1" />
+                </template>
+              </Button>
             </div>
-          </div>
-        </template>
-      </FileUpload>
-      <div class="mt-5">
-        <p
-          class="text-xs text-neutral font-primary font-semibold tracking-wider mb-2"
-        >
-          RECENT PHOTOS
-        </p>
-        <div class="flex gap-3">
-          <button
-            v-for="photo in recentPhotos"
-            :key="photo.id"
-            class="w-14 h-14 rounded-lg overflow-hidden border-2 border-transparent transition duration-normal hover:border-primary flex-shrink-0"
-            :class="{ 'border-primary': uploadedPhoto === photo.src }"
-            @click="selectRecent(photo.src)"
-          >
-            <NuxtImg
-              :src="photo.src"
-              :alt="photo.alt"
-              class="w-full h-full object-cover"
-            />
-          </button>
+          </template>
+        </FileUpload>
+        <div class="flex-shrink max-w-[12rem]">
+          <NuxtImg
+            src="/images/user-upload.png"
+            alt="Photo guide example "
+            class=" object-cover"
+          />
         </div>
+      </div>
+
+      <!-- Guide Image with Tips -->
+      <div class="flex-shrink-0 flex items-center gap-3">
+        <div class="relative"></div>
       </div>
     </div>
 
     <ImagePreviewDialog
       v-model:visible="previewVisible"
-      :src="uploadedPhoto || ''"
+      :src="personPreviewUrl || ''"
       alt="Your uploaded photo"
     />
   </section>
@@ -183,5 +201,8 @@ const formatSize = (bytes: number | undefined) => {
 <style scoped>
 :deep(.p-fileupload-header) {
   display: none !important;
+}
+:deep(.p-fileupload-content) {
+  border: none !important;
 }
 </style>

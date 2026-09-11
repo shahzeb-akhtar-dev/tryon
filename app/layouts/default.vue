@@ -14,7 +14,7 @@ const handleLogout = async () => {
 
 <template>
   <div class="min-h-screen max-w-lg items-center mx-auto flex flex-col *:text-black">
-    <header class="bg-white border-b border-neutral/10">
+    <header class="bg-white border-b border-neutral/10 w-full">
       <nav class="max-w-[1520px] mx-auto px-5 sm:px-8 lg:px-10 2xl:px-12 flex items-center justify-between h-16">
         <div class="flex items-center gap-3">
           <NuxtImg

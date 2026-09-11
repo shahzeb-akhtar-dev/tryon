@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { reactive, ref, computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { SITE_LOGIN_PATH } from '~/utils/site'
+import CustomTab from '../Common/CustomTab.vue'
 
 const { loading, error, login, signup, loginWithGoogle, resetPassword } = useAuth()
 const router = useRouter()
@@ -9,6 +11,11 @@ const router = useRouter()
 const activeTab = ref('login')
 const showPassword = ref(false)
 const forgotPasswordMode = ref(false)
+
+const tabs = [
+  { key: 'login', label: 'Log In' },
+  { key: 'signup', label: 'Sign Up' },
+]
 
 const form = reactive({
   email: '',
@@ -56,34 +63,17 @@ const handleForgotPassword = async () => {
 </script>
 
 <template>
-  <div class="relative z-20 flex items-end md:items-center justify-center min-h-screen px-4 py-8">
-    <div class="w-full max-w-[420px] bg-white rounded-2xl shadow-2xl p-8">
-      <div class="text-center mb-6">
-        <h1 class="text-3xl text-black font-primary font-bold mb-1">Welcome Back</h1>
-        <p class="text-md text-neutral font-primary">Sign in to curate your virtual wardrobe.</p>
+  <div class="relative z-20 flex items-end md:items-center justify-center min-h-screen px-2 py-4 md:py-8 md:px-4">
+    <div class="w-full max-w-[420px] bg-white rounded-2xl shadow-2xl p-4 md:p-8">
+      <div class="text-center mb-3 md:mb-6">
+        <h1 class="text-2xl md:text-3xl text-black font-primary font-bold mb-1">Welcome Back</h1>
+        <p class="text-sm md:text-md text-neutral font-primary">{{activeTab === 'login' ? 'Sign in' : 'Create your account'}} to define your style.</p>
       </div>
 
-      <div class="flex w-full bg-tertiary rounded-lg p-1 mb-6">
-        <button
-          type="button"
-          class="flex-1 py-2.5 text-md font-primary rounded-md transition duration-normal"
-          :class="activeTab === 'login' ? 'bg-white text-primary shadow-sm border-b-2 border-primary' : 'text-neutral hover:text-primary'"
-          @click="activeTab = 'login'"
-        >
-          Log In
-        </button>
-        <button
-          type="button"
-          class="flex-1 py-2.5 text-md font-primary rounded-md transition duration-normal"
-          :class="activeTab === 'signup' ? 'bg-white text-primary shadow-sm border-b-2 border-primary' : 'text-neutral hover:text-primary'"
-          @click="activeTab = 'signup'"
-        >
-          Sign Up
-        </button>
-      </div>
+      <CustomTab v-if="!forgotPasswordMode" v-model="activeTab" :tabs="tabs" />
 
       <template v-if="forgotPasswordMode">
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-3 md:gap-6">
           <div class="flex flex-col gap-1">
             <label class="text-sm text-neutral font-primary">Email Address</label>
             <div class="relative">
@@ -195,11 +185,6 @@ const handleForgotPassword = async () => {
         </div>
 
         <AuthSocialButtons @google="handleGoogleLogin" />
-
-        <p class="text-center text-sm text-neutral font-primary mt-6">
-          New to TryOn?
-          <NuxtLink :to="SITE_LOGIN_PATH" class="text-primary hover:underline transition duration-normal font-medium">Create an account</NuxtLink>
-        </p>
       </template>
     </div>
   </div>

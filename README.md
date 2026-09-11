@@ -1,75 +1,96 @@
-# Nuxt Minimal Starter
+# TryOn - AI Virtual Try-On
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+AI-powered virtual try-on application built with Nuxt 4, Firebase, and FASHN AI.
 
 ## Setup
 
-Make sure to install dependencies:
+### 1. Install dependencies
 
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
+### 2. Configure Firebase
 
-Start the development server on `http://localhost:3000`:
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable **Authentication** (Email/Password and Google providers)
+3. Enable **Firestore Database**
+4. Enable **Storage**
+5. Copy your Firebase web config values
+
+### 3. Configure Firebase Admin SDK (Server-Side)
+
+1. Go to Firebase Console > Project Settings > Service Accounts
+2. Click **Generate new private key** to download a JSON file
+3. Extract the `project_id`, `client_email`, and `private_key` values
+
+### 4. Configure FASHN AI
+
+1. Create an account at [app.fashn.ai](https://app.fashn.ai)
+2. Go to **Developer API** > **API Keys** > **Create new API key**
+
+### 5. Environment Variables
+
+Copy `.env` and fill in your values:
+
+```env
+# Firebase Client (public - safe for browser)
+NUXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NUXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NUXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# FASHN AI (server-side only - NEVER expose to browser)
+FASHN_API_KEY=your_fashn_api_key
+
+# Firebase Admin (server-side only - from service account JSON)
+FIREBASE_ADMIN_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your-service-account@your_project.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_KEY\n-----END PRIVATE KEY-----\n"
+FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+```
+
+### 6. Start Development Server
 
 ```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+The app runs at `http://localhost:3000`.
 
-Build the application for production:
+## Usage
+
+1. **Sign up / Log in** with email or Google
+2. **Upload your photo** - a clear, full-body photo works best
+3. **Upload a garment** - a clear image of the clothing item
+4. **Click Generate Try-on** - wait for the AI to process
+5. **View & Download** your virtual try-on result
+
+## Where Data Is Stored
+
+| Data | Location |
+|------|----------|
+| Person photos | Firebase Storage: `users/{uid}/tryons/{tryOnId}/person.*` |
+| Garment images | Firebase Storage: `users/{uid}/tryons/{tryOnId}/garment.*` |
+| Try-on results | Firebase Storage: `users/{uid}/tryons/{tryOnId}/result.jpg` |
+| Try-on records | Firestore: `users/{uid}/tryons/{tryOnId}` |
+| Recent photos | Firestore: `users/{uid}/photos/{photoId}` |
+| Saved garments | Firestore: `users/{uid}/garments/{garmentId}` |
+
+## Build for Production
 
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Tech Stack
+
+- **Framework:** Nuxt 4 (Vue 3 + TypeScript)
+- **UI:** PrimeVue 4 + Tailwind CSS
+- **Auth:** Firebase Authentication
+- **Storage:** Firebase Storage
+- **Database:** Firestore
+- **AI:** FASHN AI (Try-On Max)

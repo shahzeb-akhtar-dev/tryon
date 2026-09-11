@@ -63,6 +63,11 @@ export default defineNuxtConfig({
     },
   },
   runtimeConfig: {
+    fashnApiKey: process.env.FASHN_API_KEY,
+    firebaseAdminProjectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
+    firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY,
+    firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
     public: {
       firebaseApiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY,
       firebaseAuthDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN,

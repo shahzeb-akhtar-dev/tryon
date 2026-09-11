@@ -3,7 +3,7 @@
     <NuxtImg
       src="/images/login-hero.png"
       alt="Fashion model virtual try-on"
-      class="w-full h-full object-cover"
+      class="w-full h-full object-cover  object-[90%_50%] lg:object-center"
     />
     <div class="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/10" />
 
