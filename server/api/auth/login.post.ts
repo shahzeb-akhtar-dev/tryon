@@ -14,21 +14,6 @@ function checkRateLimit(key: string): boolean {
   return true
 }
 
-function mapFirebaseAuthError(errorCode: string): { statusCode: number; message: string } {
-  const map: Record<string, { statusCode: number; message: string }> = {
-    'EMAIL_NOT_FOUND': { statusCode: 401, message: 'No account found with this email.' },
-    'INVALID_PASSWORD': { statusCode: 401, message: 'Incorrect password.' },
-    'USER_DISABLED': { statusCode: 403, message: 'This account has been disabled.' },
-    'INVALID_LOGIN_CREDENTIALS': { statusCode: 401, message: 'Invalid email or password.' },
-    'TOO_MANY_ATTEMPTS_TRY_LATER': { statusCode: 429, message: 'Too many attempts. Please try again later.' },
-    'INVALID_EMAIL': { statusCode: 400, message: 'Please enter a valid email address.' },
-    'MISSING_PASSWORD': { statusCode: 400, message: 'Please enter a password.' },
-    'EMAIL_EXISTS': { statusCode: 409, message: 'An account with this email already exists.' },
-    'WEAK_PASSWORD': { statusCode: 400, message: 'Password must be at least 6 characters.' },
-  }
-  return map[errorCode] || { statusCode: 500, message: 'Authentication failed. Please try again.' }
-}
-
 export default defineEventHandler(async (event) => {
   const rateKey = getRateLimitKey(event)
   if (!checkRateLimit(rateKey)) {
@@ -49,41 +34,55 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig()
-  const apiKey = config.public.firebaseApiKey as string
+  const supabaseUrl = config.public.supabaseUrl as string
+  const supabaseAnonKey = config.public.supabaseAnonKey as string
 
   try {
     const response = await $fetch<any>(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      `${supabaseUrl}/auth/v1/token?grant_type=password`,
       {
         method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
         body: {
           email,
           password,
-          returnSecureToken: true,
         },
       }
     )
 
     return {
       success: true,
-      idToken: response.idToken,
-      refreshToken: response.refreshToken,
+      idToken: response.access_token,
+      refreshToken: response.refresh_token,
       user: {
-        uid: response.localId,
-        email: response.email || null,
-        displayName: response.displayName || null,
-        photoURL: null,
+        uid: response.user.id,
+        email: response.user.email || null,
+        displayName: response.user.user_metadata?.full_name || null,
+        photoURL: response.user.user_metadata?.avatar_url || null,
       },
     }
   } catch (error: any) {
-    const errorCode = error?.data?.error?.message || error?.message || ''
-    const mapped = mapFirebaseAuthError(errorCode)
+    const errorCode = error?.data?.error_code || error?.data?.msg || error?.message || ''
+
+    let statusCode = 500
+    let message = 'Login failed. Please try again.'
+
+    if (errorCode.includes('invalid_credentials') || errorCode.includes('Invalid login credentials')) {
+      statusCode = 401
+      message = 'Invalid email or password.'
+    } else if (errorCode.includes('email_not_confirmed')) {
+      statusCode = 403
+      message = 'Please verify your email address.'
+    }
 
     console.error('Login error:', { errorCode, email })
 
     throw createError({
-      statusCode: mapped.statusCode,
-      statusMessage: mapped.message,
+      statusCode,
+      statusMessage: message,
     })
   }
 })

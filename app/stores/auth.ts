@@ -39,6 +39,7 @@ export const useAuthStore = defineStore("auth", {
       this.refreshToken = refreshToken || null;
       if (import.meta.client) {
         sessionStorage.setItem("auth_token", idToken);
+        sessionStorage.setItem("auth_user", JSON.stringify(userData));
         if (refreshToken) {
           sessionStorage.setItem("auth_refresh_token", refreshToken);
         }
@@ -49,9 +50,17 @@ export const useAuthStore = defineStore("auth", {
       if (import.meta.client) {
         const token = sessionStorage.getItem("auth_token");
         const refreshToken = sessionStorage.getItem("auth_refresh_token");
+        const userStr = sessionStorage.getItem("auth_user");
         if (token) {
           this.token = token;
           this.refreshToken = refreshToken;
+          if (userStr) {
+            try {
+              this.user = JSON.parse(userStr);
+            } catch {
+              this.user = null;
+            }
+          }
         }
       }
     },
@@ -62,6 +71,7 @@ export const useAuthStore = defineStore("auth", {
       this.refreshToken = null;
       if (import.meta.client) {
         sessionStorage.removeItem("auth_token");
+        sessionStorage.removeItem("auth_user");
         sessionStorage.removeItem("auth_refresh_token");
       }
     },

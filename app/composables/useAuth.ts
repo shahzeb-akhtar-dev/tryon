@@ -1,13 +1,6 @@
 import { ref, computed } from 'vue'
-import { initializeApp, getApp } from 'firebase/app'
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signOut,
-  onAuthStateChanged,
-  type User,
-} from 'firebase/auth'
+import { getSupabaseClient } from '~/utils/supabase-client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 interface AuthUser {
   uid: string
@@ -33,36 +26,20 @@ const error = ref<string | null>(null)
 const user = ref<AuthUser | null>(null)
 const isInitialized = ref(false)
 
-let googleAuthListener: (() => void) | null = null
-
 export function useAuth() {
   const getStore = () => useAuthStore()
 
   const isAuthenticated = computed(() => getStore().isAuthenticated)
 
-  function getFirebaseClientAuth() {
-    const config = useRuntimeConfig()
-    let app
-    try {
-      app = getApp()
-    } catch {
-      app = initializeApp({
-        apiKey: config.public.firebaseApiKey as string,
-        authDomain: config.public.firebaseAuthDomain as string,
-        projectId: config.public.firebaseProjectId as string,
-        storageBucket: config.public.firebaseStorageBucket as string,
-        messagingSenderId: config.public.firebaseMessagingSenderId as string,
-        appId: config.public.firebaseAppId as string,
-      })
-    }
-    return getAuth(app)
+  function getSupabase() {
+    return getSupabaseClient()
   }
 
   async function initAuth() {
     const authStore = getStore()
     authStore.loadFromStorage()
 
-    if (authStore.token) {
+    if (authStore.token && authStore.user) {
       try {
         const response = await $fetch<{ success: boolean; user: AuthUser }>('/api/auth/me', {
           headers: { Authorization: `Bearer ${authStore.token}` },
@@ -74,9 +51,11 @@ export function useAuth() {
           authStore.clearAuth()
           user.value = null
         }
-      } catch {
-        authStore.clearAuth()
-        user.value = null
+      } catch (e: any) {
+        if (e?.data?.statusCode === 401) {
+          authStore.clearAuth()
+          user.value = null
+        }
       }
     }
 
@@ -134,47 +113,23 @@ export function useAuth() {
     loading.value = true
     error.value = null
     try {
-      const firebaseAuth = getFirebaseClientAuth()
-      const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(firebaseAuth, provider)
-
-      const idToken = await result.user.getIdToken()
-
-      const response = await $fetch<{ success: boolean; user: AuthUser }>('/api/auth/google', {
-        method: 'POST',
-        body: { idToken },
+      const supabase = getSupabase()
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       })
 
-      if (response.success) {
-        const authStore = getStore()
-        authStore.setSession(response.user, idToken)
-        user.value = response.user
+      if (authError) {
+        throw new Error(authError.message)
+      }
 
-        googleAuthListener = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
-          if (firebaseUser && authStore.isAuthenticated) {
-            try {
-              const freshToken = await firebaseUser.getIdToken()
-              authStore.setSession(
-                {
-                  uid: firebaseUser.uid,
-                  email: firebaseUser.email,
-                  displayName: firebaseUser.displayName,
-                  photoURL: firebaseUser.photoURL,
-                },
-                freshToken,
-              )
-              user.value = authStore.currentUser
-            } catch {
-            }
-          }
-        })
+      if (data.url) {
+        window.location.href = data.url
       }
     } catch (e: any) {
-      const msg = e?.code === 'auth/popup-closed-by-user'
-        ? 'Sign-in popup was closed. Please try again.'
-        : e?.code === 'auth/popup-blocked'
-          ? 'Pop-up was blocked. Please allow pop-ups and try again.'
-          : e?.message || 'Google sign-in failed.'
+      const msg = e?.message || 'Google sign-in failed.'
       error.value = msg
       throw new Error(msg)
     } finally {
@@ -210,14 +165,9 @@ export function useAuth() {
       }
 
       try {
-        const firebaseAuth = getFirebaseClientAuth()
-        await signOut(firebaseAuth)
+        const supabase = getSupabase()
+        await supabase.auth.signOut()
       } catch {
-      }
-
-      if (googleAuthListener) {
-        googleAuthListener()
-        googleAuthListener = null
       }
 
       const authStore = getStore()

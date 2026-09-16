@@ -34,15 +34,19 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig()
-  const apiKey = config.public.firebaseApiKey as string
+  const supabaseUrl = config.public.supabaseUrl as string
+  const supabaseAnonKey = config.public.supabaseAnonKey as string
 
   try {
     await $fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+      `${supabaseUrl}/auth/v1/recover`,
       {
         method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
         body: {
-          requestType: 'PASSWORD_RESET',
           email,
         },
       }

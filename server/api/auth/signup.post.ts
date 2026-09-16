@@ -14,17 +14,6 @@ function checkRateLimit(key: string): boolean {
   return true
 }
 
-function mapFirebaseAuthError(errorCode: string): { statusCode: number; message: string } {
-  const map: Record<string, { statusCode: number; message: string }> = {
-    'EMAIL_EXISTS': { statusCode: 409, message: 'An account with this email already exists.' },
-    'INVALID_EMAIL': { statusCode: 400, message: 'Please enter a valid email address.' },
-    'WEAK_PASSWORD': { statusCode: 400, message: 'Password must be at least 6 characters.' },
-    'TOO_MANY_ATTEMPTS_TRY_LATER': { statusCode: 429, message: 'Too many attempts. Please try again later.' },
-    'OPERATION_NOT_ALLOWED': { statusCode: 403, message: 'Email/password sign-up is not enabled.' },
-  }
-  return map[errorCode] || { statusCode: 500, message: 'Sign-up failed. Please try again.' }
-}
-
 export default defineEventHandler(async (event) => {
   const rateKey = getRateLimitKey(event)
   if (!checkRateLimit(rateKey)) {
@@ -52,41 +41,55 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig()
-  const apiKey = config.public.firebaseApiKey as string
+  const supabaseUrl = config.public.supabaseUrl as string
+  const supabaseAnonKey = config.public.supabaseAnonKey as string
 
   try {
     const response = await $fetch<any>(
-      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
+      `${supabaseUrl}/auth/v1/signup`,
       {
         method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
         body: {
           email,
           password,
-          returnSecureToken: true,
         },
       }
     )
 
     return {
       success: true,
-      idToken: response.idToken,
-      refreshToken: response.refreshToken,
+      idToken: response.access_token,
+      refreshToken: response.refresh_token,
       user: {
-        uid: response.localId,
+        uid: response.id,
         email: response.email || email,
-        displayName: response.displayName || null,
-        photoURL: null,
+        displayName: response.user_metadata?.full_name || null,
+        photoURL: response.user_metadata?.avatar_url || null,
       },
     }
   } catch (error: any) {
-    const errorCode = error?.data?.error?.message || error?.message || ''
-    const mapped = mapFirebaseAuthError(errorCode)
+    const errorCode = error?.data?.error_code || error?.data?.msg || error?.message || ''
+
+    let statusCode = 500
+    let message = 'Sign-up failed. Please try again.'
+
+    if (errorCode.includes('user_already_exists') || errorCode.includes('already registered')) {
+      statusCode = 409
+      message = 'An account with this email already exists.'
+    } else if (errorCode.includes('invalid_email')) {
+      statusCode = 400
+      message = 'Please enter a valid email address.'
+    }
 
     console.error('Signup error:', { errorCode, email })
 
     throw createError({
-      statusCode: mapped.statusCode,
-      statusMessage: mapped.message,
+      statusCode,
+      statusMessage: message,
     })
   }
 })

@@ -1,22 +1,5 @@
 import { ref, computed } from 'vue'
-import { getApp } from 'firebase/app'
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
-import {
-  getFirestore,
-  collection,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  getDocs,
-  serverTimestamp,
-  Timestamp,
-} from 'firebase/firestore'
 import type {
-  TryOnDocument,
   TryOnStatus,
   RecentPhoto,
   SavedGarment,
@@ -36,19 +19,7 @@ const error = ref<string | null>(null)
 const recentPhotos = ref<RecentPhoto[]>([])
 const savedGarments = ref<SavedGarment[]>([])
 
-function getFirebaseServices() {
-  const app = getApp()
-  return {
-    storage: getStorage(app),
-    firestore: getFirestore(app),
-  }
-}
-
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 10)
-}
-
-function validateImage(file: File, type: 'person' | 'garment'): string | null {
+function validateImage(file: File): string | null {
   const validTypes = ['image/jpeg', 'image/png', 'image/webp']
   if (!validTypes.includes(file.type)) {
     return `Please upload a JPEG, PNG, or WebP image.`
@@ -67,7 +38,7 @@ export function useTryOn() {
   const authStore = useAuthStore()
 
   const canGenerate = computed(() => {
-    return personFile.value && garmentFile.value && !generating.value && !uploading.value
+    return personFile.value && garmentFile.value && !generating.value && !uploading.value && authStore.isAuthenticated
   })
 
   const isReady = computed(() => {
@@ -76,7 +47,7 @@ export function useTryOn() {
 
   function setPersonFile(file: File | null) {
     if (file) {
-      const validationError = validateImage(file, 'person')
+      const validationError = validateImage(file)
       if (validationError) {
         error.value = validationError
         return false
@@ -99,7 +70,7 @@ export function useTryOn() {
 
   function setGarmentFile(file: File | null) {
     if (file) {
-      const validationError = validateImage(file, 'garment')
+      const validationError = validateImage(file)
       if (validationError) {
         error.value = validationError
         return false
@@ -120,15 +91,11 @@ export function useTryOn() {
     return true
   }
 
-  async function uploadToStorage(file: File, path: string): Promise<string> {
-    const { storage } = getFirebaseServices()
-    const fileRef = storageRef(storage, path)
-    const snapshot = await uploadBytes(fileRef, file)
-    const downloadUrl = await getDownloadURL(snapshot.ref)
-    return downloadUrl
-  }
-
   async function generateTryOn(): Promise<boolean> {
+    if (!authStore.user || !authStore.token) {
+      authStore.loadFromStorage()
+    }
+
     if (!authStore.isAuthenticated || !authStore.user) {
       error.value = 'Please sign in before generating a try-on.'
       return false
@@ -154,67 +121,38 @@ export function useTryOn() {
     resultImageUrl.value = null
     statusMessage.value = 'Preparing your images...'
 
-    const uid = authStore.user.uid
-    const tryOnId = generateId()
+    const token = authStore.token
+    if (!token) {
+      error.value = 'Authentication token expired. Please sign in again.'
+      generating.value = false
+      uploading.value = false
+      return false
+    }
 
     try {
-      statusMessage.value = 'Uploading your photo...'
-      const personPath = `users/${uid}/tryons/${tryOnId}/person.${personFile.value.name.split('.').pop() || 'jpg'}`
-      const personImageUrl = await uploadToStorage(personFile.value, personPath)
-
-      statusMessage.value = 'Uploading the garment...'
-      const garmentPath = `users/${uid}/tryons/${tryOnId}/garment.${garmentFile.value.name.split('.').pop() || 'jpg'}`
-      const garmentImageUrl = await uploadToStorage(garmentFile.value, garmentPath)
-
-      statusMessage.value = 'Analyzing the garment...'
-
-      const { firestore } = getFirebaseServices()
-      const tryOnDoc: Omit<TryOnDocument, 'id'> = {
-        userId: uid,
-        personImageUrl,
-        garmentImageUrl,
-        resultImageUrl: null,
-        fashnPredictionId: null,
-        status: 'ready',
-        category: 'auto',
-        mode: 'balanced',
-        outputFormat: 'jpeg',
-        error: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        completedAt: null,
-      }
-
-      await setDoc(doc(firestore, 'users', uid, 'tryons', tryOnId), tryOnDoc)
-
-      currentTryOnId.value = tryOnId
-      status.value = 'ready'
-      uploading.value = false
-
-      statusMessage.value = 'Creating your try-on...'
+      statusMessage.value = 'Generating your try-on...'
       status.value = 'generating'
 
-      const token = authStore.token
-      if (!token) {
-        throw new Error('Authentication token expired. Please sign in again.')
-      }
+      const formData = new FormData()
+      formData.append('personImage', personFile.value)
+      formData.append('garmentImage', garmentFile.value)
 
       const response = await $fetch<{
         success: boolean
         tryOnId: string
         status: TryOnStatus
         resultImageUrl?: string
-        predictionId?: string
         error?: string
-      }>('/api/tryon/generate', {
+      }>('/api/tryon/generate-direct', {
         method: 'POST',
-        body: { tryOnId },
+        body: formData,
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
 
       if (response.success && response.resultImageUrl) {
+        currentTryOnId.value = response.tryOnId
         resultImageUrl.value = response.resultImageUrl
         status.value = 'completed'
         statusMessage.value = ''
@@ -230,23 +168,6 @@ export function useTryOn() {
       status.value = 'failed'
       error.value = e?.data?.statusMessage || e?.message || 'Generation failed. Please try again.'
       statusMessage.value = ''
-
-      if (currentTryOnId.value) {
-        try {
-          const { firestore } = getFirebaseServices()
-          await updateDoc(
-            doc(firestore, 'users', uid, 'tryons', currentTryOnId.value),
-            {
-              status: 'failed',
-              error: error.value,
-              updatedAt: new Date().toISOString(),
-            }
-          )
-        } catch (updateError) {
-          console.error('Failed to update try-on status:', updateError)
-        }
-      }
-
       return false
     } finally {
       generating.value = false
@@ -255,83 +176,122 @@ export function useTryOn() {
   }
 
   async function loadRecentPhotos() {
-    if (!authStore.user) return
+    if (!authStore.user || !authStore.token) {
+      authStore.loadFromStorage()
+    }
+    if (!authStore.user || !authStore.token) return
 
     try {
-      const { firestore } = getFirebaseServices()
-      const q = query(
-        collection(firestore, 'users', authStore.user.uid, 'photos'),
-        orderBy('createdAt', 'desc')
-      )
-      const snapshot = await getDocs(q)
-      recentPhotos.value = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      })) as RecentPhoto[]
+      const response = await $fetch<{
+        success: boolean
+        photos: Array<{ id: string; userId: string; imageUrl: string; createdAt: string }>
+      }>('/api/photos/list', {
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+
+      if (response.success) {
+        recentPhotos.value = response.photos.map((p) => ({
+          id: p.id,
+          userId: p.userId,
+          imageUrl: p.imageUrl,
+          createdAt: p.createdAt,
+        })) as RecentPhoto[]
+      }
     } catch (e) {
       console.error('Failed to load recent photos:', e)
     }
   }
 
   async function saveRecentPhoto(imageUrl: string) {
-    if (!authStore.user) return
+    if (!authStore.user || !authStore.token) {
+      authStore.loadFromStorage()
+    }
+    if (!authStore.user || !authStore.token) return
 
     try {
-      const { firestore } = getFirebaseServices()
-      const photoId = generateId()
-      const photoData = {
-        id: photoId,
-        userId: authStore.user.uid,
-        imageUrl,
-        createdAt: new Date().toISOString(),
+      const response = await $fetch<{
+        success: boolean
+        photo: { id: string; userId: string; imageUrl: string; createdAt: string }
+      }>('/api/photos/save', {
+        method: 'POST',
+        body: { imageUrl },
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+
+      if (response.success && response.photo) {
+        recentPhotos.value.unshift({
+          id: response.photo.id,
+          userId: response.photo.userId,
+          imageUrl: response.photo.imageUrl,
+          createdAt: response.photo.createdAt,
+        } as RecentPhoto)
       }
-      await setDoc(
-        doc(firestore, 'users', authStore.user.uid, 'photos', photoId),
-        photoData
-      )
-      recentPhotos.value.unshift(photoData as RecentPhoto)
     } catch (e) {
       console.error('Failed to save recent photo:', e)
     }
   }
 
   async function loadSavedGarments() {
-    if (!authStore.user) return
+    if (!authStore.user || !authStore.token) {
+      authStore.loadFromStorage()
+    }
+    if (!authStore.user || !authStore.token) return
 
     try {
-      const { firestore } = getFirebaseServices()
-      const q = query(
-        collection(firestore, 'users', authStore.user.uid, 'garments'),
-        orderBy('createdAt', 'desc')
-      )
-      const snapshot = await getDocs(q)
-      savedGarments.value = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      })) as SavedGarment[]
+      const response = await $fetch<{
+        success: boolean
+        garments: Array<{ id: string; userId: string; imageUrl: string; name: string; createdAt: string }>
+      }>('/api/garments/list', {
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+
+      if (response.success) {
+        savedGarments.value = response.garments.map((g) => ({
+          id: g.id,
+          userId: g.userId,
+          imageUrl: g.imageUrl,
+          name: g.name,
+          createdAt: g.createdAt,
+        })) as SavedGarment[]
+      }
     } catch (e) {
       console.error('Failed to load saved garments:', e)
     }
   }
 
   async function saveGarment(imageUrl: string, name: string) {
-    if (!authStore.user) return
+    if (!authStore.user || !authStore.token) {
+      authStore.loadFromStorage()
+    }
+    if (!authStore.user || !authStore.token) return
 
     try {
-      const { firestore } = getFirebaseServices()
-      const garmentId = generateId()
-      const garmentData = {
-        id: garmentId,
-        userId: authStore.user.uid,
-        imageUrl,
-        name,
-        createdAt: new Date().toISOString(),
+      const response = await $fetch<{
+        success: boolean
+        garment: { id: string; userId: string; imageUrl: string; name: string; createdAt: string }
+      }>('/api/garments/save', {
+        method: 'POST',
+        body: { imageUrl, name },
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+
+      if (response.success && response.garment) {
+        savedGarments.value.unshift({
+          id: response.garment.id,
+          userId: response.garment.userId,
+          imageUrl: response.garment.imageUrl,
+          name: response.garment.name,
+          createdAt: response.garment.createdAt,
+        } as SavedGarment)
       }
-      await setDoc(
-        doc(firestore, 'users', authStore.user.uid, 'garments', garmentId),
-        garmentData
-      )
-      savedGarments.value.unshift(garmentData as SavedGarment)
     } catch (e) {
       console.error('Failed to save garment:', e)
     }

@@ -9,30 +9,28 @@ export default defineEventHandler(async (event) => {
 
   const token = authHeader.slice(7)
   const config = useRuntimeConfig()
-  const apiKey = config.public.firebaseApiKey as string
+  const supabaseUrl = config.public.supabaseUrl as string
+  const supabaseAnonKey = config.public.supabaseAnonKey as string
 
   try {
     const response = await $fetch<any>(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      `${supabaseUrl}/auth/v1/user`,
       {
-        method: 'POST',
-        body: { idToken: token },
+        method: 'GET',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${token}`,
+        },
       }
     )
-
-    if (!response.users || response.users.length === 0) {
-      throw new Error('No user found')
-    }
-
-    const firebaseUser = response.users[0]
 
     return {
       success: true,
       user: {
-        uid: firebaseUser.localId,
-        email: firebaseUser.email || null,
-        displayName: firebaseUser.displayName || null,
-        photoURL: firebaseUser.photoUrl || null,
+        uid: response.id,
+        email: response.email || null,
+        displayName: response.user_metadata?.full_name || null,
+        photoURL: response.user_metadata?.avatar_url || null,
       },
     }
   } catch (error: any) {

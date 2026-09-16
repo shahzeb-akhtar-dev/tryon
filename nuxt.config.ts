@@ -64,18 +64,12 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     fashnApiKey: process.env.FASHN_API_KEY,
-    firebaseAdminProjectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-    firebaseClientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY,
-    firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    openaiApiKey: process.env.OPENAI_API_KEY,
+    supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    supabaseUrl: process.env.SUPABASE_URL,
     public: {
-      firebaseApiKey: process.env.NUXT_PUBLIC_FIREBASE_API_KEY,
-      firebaseAuthDomain: process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      firebaseProjectId: process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID,
-      firebaseStorageBucket: process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      firebaseMessagingSenderId:
-        process.env.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
     },
   },
 });

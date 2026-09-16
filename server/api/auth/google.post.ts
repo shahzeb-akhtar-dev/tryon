@@ -1,4 +1,4 @@
-import { getFirebaseAdmin, verifyFirebaseToken } from '../../utils/firebase-admin'
+import { getSupabaseAdmin } from '../../utils/supabase-admin'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -12,35 +12,34 @@ export default defineEventHandler(async (event) => {
   }
 
   const config = useRuntimeConfig()
-  const apiKey = config.public.firebaseApiKey as string
+  const supabaseUrl = config.public.supabaseUrl as string
+  const supabaseAnonKey = config.public.supabaseAnonKey as string
 
   let user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null }
 
   try {
-    const lookupResponse = await $fetch<any>(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+    const response = await $fetch<any>(
+      `${supabaseUrl}/auth/v1/user`,
       {
-        method: 'POST',
-        body: { idToken },
+        method: 'GET',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${idToken}`,
+        },
       }
     )
 
-    if (!lookupResponse.users || lookupResponse.users.length === 0) {
-      throw new Error('No user found for token')
-    }
-
-    const firebaseUser = lookupResponse.users[0]
     user = {
-      uid: firebaseUser.localId,
-      email: firebaseUser.email || null,
-      displayName: firebaseUser.displayName || null,
-      photoURL: firebaseUser.photoUrl || null,
+      uid: response.id,
+      email: response.email || null,
+      displayName: response.user_metadata?.full_name || null,
+      photoURL: response.user_metadata?.avatar_url || null,
     }
-  } catch (restError: any) {
-    console.error('Google auth REST API error:', {
-      message: restError?.message,
-      data: restError?.data,
-      status: restError?.statusCode,
+  } catch (error: any) {
+    console.error('Google auth error:', {
+      message: error?.message,
+      data: error?.data,
+      status: error?.statusCode,
     })
 
     throw createError({
@@ -50,14 +49,14 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const { firestore } = getFirebaseAdmin()
-    await firestore.collection('users').doc(user.uid).set({
+    const supabase = getSupabaseAdmin()
+    await supabase.from('users').upsert({
       uid: user.uid,
       email: user.email,
-      displayName: user.displayName,
-      photoURL: user.photoURL,
-      updatedAt: new Date().toISOString(),
-    }, { merge: true })
+      display_name: user.displayName,
+      photo_url: user.photoURL,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'uid' })
   } catch (e: any) {
     console.warn('Could not upsert user document:', e?.message)
   }
@@ -65,5 +64,6 @@ export default defineEventHandler(async (event) => {
   return {
     success: true,
     user,
+    idToken,
   }
 })
